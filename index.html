@@ -4,8 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Study Notes Hub</title>
-  <script src="/_sdk/element_sdk.js"></script>
-  <script src="/_sdk/data_sdk.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     body {
@@ -93,13 +91,24 @@
     .filter-btn:hover {
       transform: translateY(-2px);
     }
+
+    .nav-btn {
+      transition: all 0.2s ease;
+    }
+
+    .nav-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
   </style>
   <style>@view-transition { navigation: auto; }</style>
+  <script src="/_sdk/data_sdk.js" type="text/javascript"></script>
+  <script src="/_sdk/element_sdk.js" type="text/javascript"></script>
  </head>
  <body>
   <div id="app" class="w-full min-h-full flex flex-col"></div>
   <script>
-    const defaultConfig = {
+    const config = {
       background_color: "#f0f9ff",
       surface_color: "#ffffff",
       text_color: "#1e293b",
@@ -138,28 +147,23 @@
       default: { icon: '📁', label: 'File', color: '#64748b' }
     };
     
-    const dataHandler = {
-      onDataChanged(data) {
-        allNotes = data;
-        renderPageContent();
+    function loadNotes() {
+      const stored = localStorage.getItem('studyNotesHub');
+      if (stored) {
+        try {
+          allNotes = JSON.parse(stored);
+        } catch (e) {
+          allNotes = [];
+        }
       }
-    };
+    }
     
-    async function initApp() {
-      const initResult = await window.dataSdk.init(dataHandler);
-      if (!initResult.isOk) {
-        showToast("Failed to initialize data storage", "error");
-      }
-      
-      if (window.elementSdk) {
-        window.elementSdk.init({
-          defaultConfig,
-          onConfigChange,
-          mapToCapabilities,
-          mapToEditPanelValues
-        });
-      }
-      
+    function saveNotes() {
+      localStorage.setItem('studyNotesHub', JSON.stringify(allNotes));
+    }
+    
+    function initApp() {
+      loadNotes();
       renderApp();
     }
     
@@ -251,20 +255,19 @@
     }
     
     function renderApp() {
-      const config = window.elementSdk?.config || defaultConfig;
-      const customFont = config.font_family || defaultConfig.font_family;
-      const baseSize = config.font_size || defaultConfig.font_size;
-      const bgColor = config.background_color || defaultConfig.background_color;
-      const surfaceColor = config.surface_color || defaultConfig.surface_color;
-      const textColor = config.text_color || defaultConfig.text_color;
-      const primaryColor = config.primary_action_color || defaultConfig.primary_action_color;
+      const customFont = config.font_family;
+      const baseSize = config.font_size;
+      const bgColor = config.background_color;
+      const surfaceColor = config.surface_color;
+      const textColor = config.text_color;
+      const primaryColor = config.primary_action_color;
       
       document.getElementById('app').innerHTML = `
         <div class="w-full min-h-full" style="background-color: ${bgColor}; font-family: '${customFont}', system-ui, sans-serif; color: ${textColor};">
           <header class="w-full py-6 px-6" style="background-color: ${surfaceColor}; border-bottom: 3px solid ${primaryColor}; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
             <div class="max-w-6xl mx-auto">
-              <h1 id="site-title" style="font-size: ${baseSize * 2}px; font-weight: 700; margin: 0 0 8px 0; color: ${primaryColor};">${config.site_title || defaultConfig.site_title}</h1>
-              <p id="site-subtitle" style="font-size: ${baseSize * 1.1}px; margin: 0 0 20px 0; opacity: 0.7;">${config.site_subtitle || defaultConfig.site_subtitle}</p>
+              <h1 id="site-title" style="font-size: ${baseSize * 2}px; font-weight: 700; margin: 0 0 8px 0; color: ${primaryColor};">${config.site_title}</h1>
+              <p id="site-subtitle" style="font-size: ${baseSize * 1.1}px; margin: 0 0 20px 0; opacity: 0.7;">${config.site_subtitle}</p>
               
               <nav style="display: flex; gap: 12px; flex-wrap: wrap;">
                 <button class="nav-btn" data-page="home" style="padding: 10px 24px; background-color: ${currentPage === 'home' ? primaryColor : 'transparent'}; color: ${currentPage === 'home' ? 'white' : primaryColor}; border: 2px solid ${primaryColor}; border-radius: 8px; font-size: ${baseSize}px; font-weight: 600; cursor: pointer; transition: all 0.2s; font-family: '${customFont}', system-ui, sans-serif;">
@@ -358,15 +361,14 @@
     }
     
     function renderHomePage() {
-      const config = window.elementSdk?.config || defaultConfig;
       const pageContent = document.getElementById('page-content');
       if (!pageContent) return;
       
-      const baseSize = config.font_size || defaultConfig.font_size;
-      const customFont = config.font_family || defaultConfig.font_family;
-      const surfaceColor = config.surface_color || defaultConfig.surface_color;
-      const textColor = config.text_color || defaultConfig.text_color;
-      const primaryColor = config.primary_action_color || defaultConfig.primary_action_color;
+      const baseSize = config.font_size;
+      const customFont = config.font_family;
+      const surfaceColor = config.surface_color;
+      const textColor = config.text_color;
+      const primaryColor = config.primary_action_color;
       
       const totalNotes = allNotes.length;
       const subjects = [...new Set(allNotes.map(n => n.subject))].length;
@@ -447,16 +449,15 @@
     }
     
     function renderBrowsePage() {
-      const config = window.elementSdk?.config || defaultConfig;
       const pageContent = document.getElementById('page-content');
       if (!pageContent) return;
       
-      const baseSize = config.font_size || defaultConfig.font_size;
-      const customFont = config.font_family || defaultConfig.font_family;
-      const surfaceColor = config.surface_color || defaultConfig.surface_color;
-      const textColor = config.text_color || defaultConfig.text_color;
-      const primaryColor = config.primary_action_color || defaultConfig.primary_action_color;
-      const secondaryColor = config.secondary_action_color || defaultConfig.secondary_action_color;
+      const baseSize = config.font_size;
+      const customFont = config.font_family;
+      const surfaceColor = config.surface_color;
+      const textColor = config.text_color;
+      const primaryColor = config.primary_action_color;
+      const secondaryColor = config.secondary_action_color;
       
       const filteredNotes = getSortedAndFilteredNotes();
       const subjects = [...new Set(allNotes.map(n => n.subject))].sort();
@@ -505,13 +506,13 @@
             ${subjectNotes.map(note => {
               const fileInfo = getFileInfo(note.fileType);
               return `
-              <div class="note-card" data-note-id="${note.__backendId}" style="padding: 24px; background-color: ${surfaceColor}; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); border-left: 4px solid ${fileInfo.color};">
+              <div class="note-card" data-note-id="${note.id}" style="padding: 24px; background-color: ${surfaceColor}; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); border-left: 4px solid ${fileInfo.color};">
                 <div style="display: flex; gap: 20px; align-items: start; flex-wrap: wrap;">
                   <div style="text-align: center; min-width: 80px;">
                     <div class="file-icon">${fileInfo.icon}</div>
                     <span style="display: inline-block; padding: 4px 10px; background-color: ${fileInfo.color}22; color: ${fileInfo.color}; border-radius: 6px; font-size: ${baseSize * 0.75}px; font-weight: 600; margin-bottom: 8px;">${fileInfo.label}</span>
                     <div style="margin-top: 12px;">
-                      <button class="upvote-btn" data-note-id="${note.__backendId}" style="padding: 8px 16px; background-color: #f59e0b22; color: #f59e0b; border: 2px solid #f59e0b; border-radius: 6px; font-size: ${baseSize * 0.85}px; font-weight: 600; cursor: pointer; font-family: '${customFont}', system-ui, sans-serif; display: flex; align-items: center; gap: 6px; justify-content: center;">
+                      <button class="upvote-btn" data-note-id="${note.id}" style="padding: 8px 16px; background-color: #f59e0b22; color: #f59e0b; border: 2px solid #f59e0b; border-radius: 6px; font-size: ${baseSize * 0.85}px; font-weight: 600; cursor: pointer; font-family: '${customFont}', system-ui, sans-serif; display: flex; align-items: center; gap: 6px; justify-content: center;">
                         <span style="font-size: ${baseSize * 1.2}px;">⭐</span>
                         <span>${note.upvotes || 0}</span>
                       </button>
@@ -524,8 +525,8 @@
                         <h4 style="font-size: ${baseSize * 1.3}px; font-weight: 600; margin: 0 0 8px 0; color: ${textColor};">${escapeHtml(note.title)}</h4>
                         <span style="display: inline-block; padding: 4px 12px; background-color: ${secondaryColor}22; color: ${secondaryColor}; border-radius: 6px; font-size: ${baseSize * 0.85}px; font-weight: 500;">${escapeHtml(note.subject)}</span>
                       </div>
-                      <div id="delete-area-${note.__backendId}">
-                        <button class="delete-btn" data-note-id="${note.__backendId}" style="padding: 8px 16px; background-color: transparent; color: #ef4444; border: 1px solid #ef4444; border-radius: 6px; font-size: ${baseSize * 0.85}px; font-weight: 500; cursor: pointer; font-family: '${customFont}', system-ui, sans-serif;">Delete</button>
+                      <div id="delete-area-${note.id}">
+                        <button class="delete-btn" data-note-id="${note.id}" style="padding: 8px 16px; background-color: transparent; color: #ef4444; border: 1px solid #ef4444; border-radius: 6px; font-size: ${baseSize * 0.85}px; font-weight: 500; cursor: pointer; font-family: '${customFont}', system-ui, sans-serif;">Delete</button>
                       </div>
                     </div>
                     
@@ -557,25 +558,14 @@
     }
     
     function renderSharePage() {
-      const config = window.elementSdk?.config || defaultConfig;
       const pageContent = document.getElementById('page-content');
       if (!pageContent) return;
       
-      const baseSize = config.font_size || defaultConfig.font_size;
-      const customFont = config.font_family || defaultConfig.font_family;
-      const surfaceColor = config.surface_color || defaultConfig.surface_color;
-      const textColor = config.text_color || defaultConfig.text_color;
-      const primaryColor = config.primary_action_color || defaultConfig.primary_action_color;
-      
-      if (allNotes.length >= 999) {
-        pageContent.innerHTML = `
-          <div style="padding: 40px; background-color: ${surfaceColor}; border-radius: 12px; text-align: center; border: 2px solid #ef4444;">
-            <h2 style="font-size: ${baseSize * 1.6}px; font-weight: 600; margin: 0 0 16px 0; color: #ef4444;">⚠️ Limit Reached</h2>
-            <p style="font-size: ${baseSize * 1.1}px; margin: 0; opacity: 0.8;">Maximum limit of 999 links reached. Please delete some links before adding new ones.</p>
-          </div>
-        `;
-        return;
-      }
+      const baseSize = config.font_size;
+      const customFont = config.font_family;
+      const surfaceColor = config.surface_color;
+      const textColor = config.text_color;
+      const primaryColor = config.primary_action_color;
       
       pageContent.innerHTML = `
         <div style="max-width: 700px; margin: 0 auto; padding: 32px; background-color: ${surfaceColor}; border-radius: 12px; box-shadow: 0 4px 16px rgba(0,0,0,0.1);">
@@ -610,7 +600,7 @@
             </div>
             
             <button type="submit" id="submit-btn" style="width: 100%; padding: 16px; background-color: ${primaryColor}; color: white; border: none; border-radius: 8px; font-size: ${baseSize * 1.15}px; font-weight: 600; cursor: pointer; font-family: '${customFont}', system-ui, sans-serif; box-shadow: 0 4px 12px ${primaryColor}44;">
-              ${config.submit_button_text || defaultConfig.submit_button_text}
+              ${config.submit_button_text}
             </button>
           </form>
         </div>
@@ -621,9 +611,8 @@
     
     function handleDeleteClick(e) {
       const noteId = e.target.dataset.noteId;
-      const config = window.elementSdk?.config || defaultConfig;
-      const baseSize = config.font_size || defaultConfig.font_size;
-      const customFont = config.font_family || defaultConfig.font_family;
+      const baseSize = config.font_size;
+      const customFont = config.font_family;
       
       const deleteArea = document.getElementById(`delete-area-${noteId}`);
       deleteArea.innerHTML = `
@@ -640,66 +629,38 @@
       });
     }
     
-    async function handleConfirmDelete(e) {
+    function handleConfirmDelete(e) {
       const noteId = e.target.dataset.noteId;
-      const note = allNotes.find(n => n.__backendId === noteId);
-      if (!note) return;
-      
-      const deleteArea = document.getElementById(`delete-area-${noteId}`);
-      deleteArea.innerHTML = `<span style="color: #64748b; font-size: ${(window.elementSdk?.config?.font_size || defaultConfig.font_size) * 0.85}px;">Deleting...</span>`;
-      
-      const result = await window.dataSdk.delete(note);
-      
-      if (result.isOk) {
-        showToast("Link deleted successfully", "success");
-      } else {
-        showToast("Failed to delete link", "error");
-        renderPageContent();
-      }
+      allNotes = allNotes.filter(n => n.id !== noteId);
+      saveNotes();
+      showToast("Link deleted successfully", "success");
+      renderPageContent();
     }
     
-    async function handleUpvoteClick(e) {
+    function handleUpvoteClick(e) {
       const noteId = e.currentTarget.dataset.noteId;
-      const note = allNotes.find(n => n.__backendId === noteId);
+      const note = allNotes.find(n => n.id === noteId);
       if (!note) return;
+      
+      note.upvotes = (note.upvotes || 0) + 1;
+      saveNotes();
       
       const btn = e.currentTarget;
-      btn.style.opacity = '0.6';
-      btn.style.cursor = 'not-allowed';
-      btn.disabled = true;
+      btn.classList.add('voted');
+      showToast("Upvoted! ⭐", "success");
       
-      const updatedNote = {
-        ...note,
-        upvotes: (note.upvotes || 0) + 1
-      };
-      
-      const result = await window.dataSdk.update(updatedNote);
-      
-      if (result.isOk) {
-        btn.classList.add('voted');
-        showToast("Upvoted! ⭐", "success");
-        setTimeout(() => {
-          btn.classList.remove('voted');
-        }, 300);
-      } else {
-        showToast("Failed to upvote", "error");
-        btn.style.opacity = '1';
-        btn.style.cursor = 'pointer';
-        btn.disabled = false;
-      }
+      setTimeout(() => {
+        btn.classList.remove('voted');
+        renderPageContent();
+      }, 300);
     }
     
-    async function handleSubmit(e) {
+    function handleSubmit(e) {
       e.preventDefault();
       
       if (isSubmitting) return;
-      if (allNotes.length >= 999) {
-        showToast("Maximum limit of 999 links reached", "error");
-        return;
-      }
       
       isSubmitting = true;
-      const config = window.elementSdk?.config || defaultConfig;
       const submitBtn = document.getElementById('submit-btn');
       submitBtn.style.opacity = '0.6';
       submitBtn.style.cursor = 'not-allowed';
@@ -713,7 +674,8 @@
       const author = document.getElementById('note-author').value;
       const fileType = detectFileType(driveLink);
       
-      const result = await window.dataSdk.create({
+      const newNote = {
+        id: Date.now().toString(),
         title,
         subject,
         description,
@@ -722,24 +684,19 @@
         fileType,
         upvotes: 0,
         createdAt: new Date().toISOString()
-      });
+      };
       
-      if (result.isOk) {
-        document.getElementById('share-form').reset();
-        showToast("Link shared successfully!", "success");
-        setTimeout(() => {
-          currentPage = 'browse';
-          renderApp();
-        }, 1000);
-      } else {
-        showToast("Failed to share link. Please try again.", "error");
-        submitBtn.style.opacity = '1';
-        submitBtn.style.cursor = 'pointer';
-        submitBtn.disabled = false;
-        submitBtn.textContent = config.submit_button_text || defaultConfig.submit_button_text;
-      }
+      allNotes.push(newNote);
+      saveNotes();
       
-      isSubmitting = false;
+      document.getElementById('share-form').reset();
+      showToast("Link shared successfully!", "success");
+      
+      setTimeout(() => {
+        currentPage = 'browse';
+        isSubmitting = false;
+        renderApp();
+      }, 1000);
     }
     
     function showToast(message, type) {
@@ -768,116 +725,7 @@
       });
     }
     
-    async function onConfigChange(config) {
-      const customFont = config.font_family || defaultConfig.font_family;
-      const baseSize = config.font_size || defaultConfig.font_size;
-      const bgColor = config.background_color || defaultConfig.background_color;
-      const surfaceColor = config.surface_color || defaultConfig.surface_color;
-      const textColor = config.text_color || defaultConfig.text_color;
-      const primaryColor = config.primary_action_color || defaultConfig.primary_action_color;
-      
-      const appContainer = document.querySelector('#app > div');
-      if (appContainer) {
-        appContainer.style.backgroundColor = bgColor;
-        appContainer.style.fontFamily = `'${customFont}', system-ui, sans-serif`;
-        appContainer.style.color = textColor;
-      }
-      
-      const header = document.querySelector('header');
-      if (header) {
-        header.style.backgroundColor = surfaceColor;
-        header.style.borderBottomColor = primaryColor;
-      }
-      
-      const siteTitle = document.getElementById('site-title');
-      if (siteTitle) {
-        siteTitle.style.fontSize = `${baseSize * 2}px`;
-        siteTitle.style.color = primaryColor;
-        siteTitle.textContent = config.site_title || defaultConfig.site_title;
-      }
-      
-      const siteSubtitle = document.getElementById('site-subtitle');
-      if (siteSubtitle) {
-        siteSubtitle.style.fontSize = `${baseSize * 1.1}px`;
-        siteSubtitle.textContent = config.site_subtitle || defaultConfig.site_subtitle;
-      }
-      
-      const submitBtn = document.getElementById('submit-btn');
-      if (submitBtn && !isSubmitting) {
-        submitBtn.style.backgroundColor = primaryColor;
-        submitBtn.style.fontSize = `${baseSize * 1.15}px`;
-        submitBtn.textContent = config.submit_button_text || defaultConfig.submit_button_text;
-      }
-      
-      renderPageContent();
-    }
-    
-    function mapToCapabilities(config) {
-      return {
-        recolorables: [
-          {
-            get: () => config.background_color || defaultConfig.background_color,
-            set: (value) => {
-              config.background_color = value;
-              window.elementSdk.setConfig({ background_color: value });
-            }
-          },
-          {
-            get: () => config.surface_color || defaultConfig.surface_color,
-            set: (value) => {
-              config.surface_color = value;
-              window.elementSdk.setConfig({ surface_color: value });
-            }
-          },
-          {
-            get: () => config.text_color || defaultConfig.text_color,
-            set: (value) => {
-              config.text_color = value;
-              window.elementSdk.setConfig({ text_color: value });
-            }
-          },
-          {
-            get: () => config.primary_action_color || defaultConfig.primary_action_color,
-            set: (value) => {
-              config.primary_action_color = value;
-              window.elementSdk.setConfig({ primary_action_color: value });
-            }
-          },
-          {
-            get: () => config.secondary_action_color || defaultConfig.secondary_action_color,
-            set: (value) => {
-              config.secondary_action_color = value;
-              window.elementSdk.setConfig({ secondary_action_color: value });
-            }
-          }
-        ],
-        borderables: [],
-        fontEditable: {
-          get: () => config.font_family || defaultConfig.font_family,
-          set: (value) => {
-            config.font_family = value;
-            window.elementSdk.setConfig({ font_family: value });
-          }
-        },
-        fontSizeable: {
-          get: () => config.font_size || defaultConfig.font_size,
-          set: (value) => {
-            config.font_size = value;
-            window.elementSdk.setConfig({ font_size: value });
-          }
-        }
-      };
-    }
-    
-    function mapToEditPanelValues(config) {
-      return new Map([
-        ["site_title", config.site_title || defaultConfig.site_title],
-        ["site_subtitle", config.site_subtitle || defaultConfig.site_subtitle],
-        ["submit_button_text", config.submit_button_text || defaultConfig.submit_button_text]
-      ]);
-    }
-    
     initApp();
   </script>
- <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9a57b90db722c464',t:'MTc2NDMxMDQ0My4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9a57c8969134c464',t:'MTc2NDMxMTA3OS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
