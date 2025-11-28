@@ -1,1 +1,1 @@
-# notes-share
+# Study Notes Hub
