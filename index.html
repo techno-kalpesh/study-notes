@@ -1,50 +1,1122 @@
-<!DOCTYPE html>
-<html>
-<head>
+<!doctype html>
+<html lang="en">
+ <head>
   <meta charset="UTF-8">
-  <title>Notes Share</title>
-</head>
-<body>
-  <h1>Welcome to Notes Share</h1>
-  <button id="logout">Logout</button>
-
-  <script type="module">
-    // Import Firebase SDK modules
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
-    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
-
-    // ✅ Your Firebase Config
-    const firebaseConfig = {
-      apiKey: "AIzaSyBQhEpMTyFYRIZw149nXuAw47cBMBhbs6I",
-      authDomain: "notes-share-kv.firebaseapp.com",
-      projectId: "notes-share-kv",
-      storageBucket: "notes-share-kv.firebasestorage.app",
-      messagingSenderId: "845944968885",
-      appId: "1:845944968885:web:d027514f1ceb78857b10fc",
-      measurementId: "G-30CCB54HB9"
-    };
-
-    // Initialize Firebase
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-
-    // Check login state
-    onAuthStateChanged(auth, user => {
-      if (user) {
-        console.log("Logged in as:", user.email);
-      } else {
-        console.log("Not logged in");
-        window.location.href = "login.html"; // redirect if not logged in
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Study Notes Hub - Firebase Edition</title>
+  <script src="/_sdk/element_sdk.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script><!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
+  <style>
+    body {
+      box-sizing: border-box;
+    }
+    
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+    }
+    
+    .toast {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      padding: 16px 24px;
+      border-radius: 8px;
+      color: white;
+      font-weight: 500;
+      z-index: 1000;
+      animation: slideIn 0.3s ease-out;
+    }
+    
+    .toast.success {
+      background-color: #10b981;
+    }
+    
+    .toast.error {
+      background-color: #ef4444;
+    }
+    
+    .toast.info {
+      background-color: #3b82f6;
+    }
+    
+    @keyframes slideIn {
+      from {
+        transform: translateX(400px);
+        opacity: 0;
       }
-    });
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
 
-    // Logout button
-    document.getElementById("logout").addEventListener("click", () => {
-      signOut(auth).then(() => {
-        alert("Logged out!");
-        window.location.href = "login.html";
+    .file-input-wrapper {
+      position: relative;
+      overflow: hidden;
+      display: inline-block;
+      width: 100%;
+    }
+
+    .file-input-wrapper input[type=file] {
+      position: absolute;
+      left: -9999px;
+    }
+
+    .file-preview {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
+      background-color: #f1f5f9;
+      border-radius: 6px;
+      margin-top: 8px;
+    }
+
+    .file-icon {
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 4px;
+      font-weight: 600;
+      font-size: 12px;
+      color: white;
+      flex-shrink: 0;
+    }
+
+    .file-icon.pdf { background-color: #ef4444; }
+    .file-icon.doc { background-color: #3b82f6; }
+    .file-icon.img { background-color: #10b981; }
+    .file-icon.other { background-color: #64748b; }
+
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(0, 0, 0, 0.8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 2000;
+      padding: 20px;
+    }
+
+    .modal-content {
+      background-color: white;
+      border-radius: 8px;
+      max-width: 90%;
+      max-height: 90%;
+      overflow: auto;
+      position: relative;
+    }
+
+    .modal-close {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      background-color: #ef4444;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      padding: 8px 16px;
+      cursor: pointer;
+      font-weight: 600;
+      z-index: 10;
+    }
+
+    .setup-banner {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 24px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+
+    .setup-banner h3 {
+      margin: 0 0 16px 0;
+      font-size: 22px;
+      font-weight: 700;
+    }
+
+    .setup-banner ol {
+      margin: 12px 0;
+      padding-left: 20px;
+    }
+
+    .setup-banner li {
+      margin: 10px 0;
+      line-height: 1.7;
+    }
+
+    .setup-banner code {
+      background-color: rgba(255,255,255,0.2);
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+    }
+
+    .setup-banner a {
+      color: #fbbf24;
+      text-decoration: underline;
+      font-weight: 600;
+    }
+
+    .setup-banner strong {
+      background-color: rgba(251, 191, 36, 0.3);
+      padding: 2px 6px;
+      border-radius: 3px;
+    }
+
+    .loading-spinner {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 3px solid rgba(255,255,255,.3);
+      border-radius: 50%;
+      border-top-color: white;
+      animation: spin 1s ease-in-out infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+  <style>@view-transition { navigation: auto; }</style>
+  <script src="/_sdk/data_sdk.js" type="text/javascript"></script>
+ </head>
+ <body>
+  <div id="app" class="w-full min-h-full flex flex-col"></div>
+  <script>
+    // ============================================
+    // 🔥 YOUR FIREBASE CONFIG URL
+    // ============================================
+    const CONFIG_URL = "https://raw.githubusercontent.com/techno-kalpesh/study-notes/main/firbase-config.js";
+    // ============================================
+    
+    const defaultConfig = {
+      background_color: "#f8fafc",
+      surface_color: "#ffffff",
+      text_color: "#1e293b",
+      primary_action_color: "#3b82f6",
+      secondary_action_color: "#64748b",
+      accent_color: "#10b981",
+      font_family: "Inter",
+      font_size: 16,
+      site_title: "Study Notes Hub",
+      site_subtitle: "Share and discover study materials with Firebase",
+      submit_button_text: "Share Notes"
+    };
+    
+    let currentPage = 'home';
+    let isDarkMode = false;
+    let searchQuery = '';
+    
+    let currentNotes = [];
+    let isSubmitting = false;
+    let selectedFile = null;
+    let db = null;
+    let storage = null;
+    let isFirebaseConfigured = false;
+    let notesListener = null;
+    let configLoadError = null;
+    let FIREBASE_CONFIG = null;
+    
+    // Load Firebase config from external URL
+    async function loadExternalConfig() {
+      try {
+        const response = await fetch(CONFIG_URL);
+        if (!response.ok) {
+          throw new Error(`Failed to load config: ${response.status} ${response.statusText}`);
+        }
+        
+        // Execute the script content to set window.FIREBASE_CONFIG
+        const scriptContent = await response.text();
+        eval(scriptContent);
+        
+        if (window.FIREBASE_CONFIG) {
+          FIREBASE_CONFIG = window.FIREBASE_CONFIG;
+          return true;
+        } else {
+          throw new Error("Config file loaded but window.FIREBASE_CONFIG not found");
+        }
+      } catch (error) {
+        console.error("Error loading external config:", error);
+        configLoadError = error.message;
+        return false;
+      }
+    }
+    
+    // Check if Firebase is configured
+    function checkFirebaseConfig() {
+      return FIREBASE_CONFIG && FIREBASE_CONFIG.apiKey && FIREBASE_CONFIG.projectId;
+    }
+    
+    // Initialize Firebase
+    function initializeFirebase() {
+      try {
+        if (!firebase.apps.length) {
+          firebase.initializeApp(FIREBASE_CONFIG);
+        }
+        db = firebase.firestore();
+        storage = firebase.storage();
+        isFirebaseConfigured = true;
+        return true;
+      } catch (error) {
+        console.error("Firebase initialization error:", error);
+        showToast("Failed to initialize Firebase. Check your configuration.", "error");
+        return false;
+      }
+    }
+    
+    // Listen to notes collection
+    function listenToNotes() {
+      if (!db) return;
+      
+      notesListener = db.collection('notes')
+        .orderBy('createdAt', 'desc')
+        .onSnapshot((snapshot) => {
+          currentNotes = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          }));
+          renderNotesList();
+        }, (error) => {
+          console.error("Error fetching notes:", error);
+          showToast("Error loading notes. Check Firebase security rules.", "error");
+        });
+    }
+    
+    async function initApp() {
+      // Show loading state
+      document.getElementById('app').innerHTML = `
+        <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background-color: #f8fafc;">
+          <div style="text-align: center;">
+            <div class="loading-spinner" style="margin: 0 auto 16px; width: 40px; height: 40px; border-width: 4px; border-color: #3b82f6; border-top-color: #cbd5e1;"></div>
+            <p style="font-size: 18px; color: #64748b; font-family: system-ui, sans-serif;">Loading Firebase configuration...</p>
+          </div>
+        </div>
+      `;
+      
+      // Load external config
+      const configLoaded = await loadExternalConfig();
+      
+      if (configLoaded && checkFirebaseConfig()) {
+        const initialized = initializeFirebase();
+        if (initialized) {
+          listenToNotes();
+        }
+      }
+      
+      if (window.elementSdk) {
+        window.elementSdk.init({
+          defaultConfig,
+          onConfigChange,
+          mapToCapabilities,
+          mapToEditPanelValues
+        });
+      }
+      
+      renderApp();
+    }
+    
+    function renderApp() {
+      const config = window.elementSdk?.config || defaultConfig;
+      const customFont = config.font_family || defaultConfig.font_family;
+      const baseSize = config.font_size || defaultConfig.font_size;
+      const bgColor = isDarkMode ? "#1e293b" : (config.background_color || defaultConfig.background_color);
+      const surfaceColor = isDarkMode ? "#334155" : (config.surface_color || defaultConfig.surface_color);
+      const textColor = isDarkMode ? "#f1f5f9" : (config.text_color || defaultConfig.text_color);
+      const primaryColor = config.primary_action_color || defaultConfig.primary_action_color;
+      const accentColor = config.accent_color || defaultConfig.accent_color;
+      
+      document.getElementById('app').innerHTML = `
+        <div class="w-full min-h-full" style="background-color: ${bgColor}; font-family: '${customFont}', system-ui, -apple-system, sans-serif; color: ${textColor}; transition: background-color 0.3s, color 0.3s;">
+          <header class="w-full py-6 px-6" style="background-color: ${surfaceColor}; border-bottom: 2px solid ${primaryColor}; transition: background-color 0.3s;">
+            <div class="max-w-6xl mx-auto">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 16px;">
+                <div>
+                  <h1 id="site-title" style="font-size: ${baseSize * 2}px; font-weight: 700; margin: 0;">${config.site_title || defaultConfig.site_title}</h1>
+                </div>
+                <button id="dark-mode-toggle" style="padding: 10px 20px; background-color: ${isDarkMode ? '#fbbf24' : '#334155'}; color: ${isDarkMode ? '#1e293b' : 'white'}; border: none; border-radius: 6px; font-size: ${baseSize * 0.9}px; font-weight: 600; cursor: pointer; transition: all 0.3s; font-family: '${customFont}', system-ui, sans-serif;">
+                  ${isDarkMode ? '☀️ Light' : '🌙 Dark'}
+                </button>
+              </div>
+              
+              <nav style="display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap;">
+                <button class="nav-btn" data-page="home" style="padding: 10px 24px; background-color: ${currentPage === 'home' ? primaryColor : 'transparent'}; color: ${currentPage === 'home' ? 'white' : textColor}; border: 2px solid ${primaryColor}; border-radius: 6px; font-size: ${baseSize}px; font-weight: 600; cursor: pointer; transition: all 0.2s; font-family: '${customFont}', system-ui, sans-serif;">
+                  🏠 Home
+                </button>
+                <button class="nav-btn" data-page="notes" style="padding: 10px 24px; background-color: ${currentPage === 'notes' ? primaryColor : 'transparent'}; color: ${currentPage === 'notes' ? 'white' : textColor}; border: 2px solid ${primaryColor}; border-radius: 6px; font-size: ${baseSize}px; font-weight: 600; cursor: pointer; transition: all 0.2s; font-family: '${customFont}', system-ui, sans-serif;">
+                  📚 Notes
+                </button>
+                <button class="nav-btn" data-page="share" style="padding: 10px 24px; background-color: ${currentPage === 'share' ? primaryColor : 'transparent'}; color: ${currentPage === 'share' ? 'white' : textColor}; border: 2px solid ${primaryColor}; border-radius: 6px; font-size: ${baseSize}px; font-weight: 600; cursor: pointer; transition: all 0.2s; font-family: '${customFont}', system-ui, sans-serif;">
+                  📤 Share
+                </button>
+              </nav>
+              
+              ${currentPage === 'notes' ? `
+                <div style="position: relative; max-width: 500px;">
+                  <input type="text" id="search-input" placeholder="🔍 Search notes by title, subject, or author..." value="${searchQuery}" style="width: 100%; padding: 12px 16px; border: 2px solid ${isDarkMode ? '#475569' : '#e2e8f0'}; background-color: ${isDarkMode ? '#475569' : 'white'}; color: ${textColor}; border-radius: 6px; font-size: ${baseSize}px; font-family: '${customFont}', system-ui, sans-serif; transition: all 0.3s;">
+                </div>
+              ` : ''}
+            </div>
+          </header>
+          
+          <main class="w-full max-w-6xl mx-auto px-6 py-8">
+            ${!isFirebaseConfigured ? `
+              <div class="setup-banner">
+                <h3>🔥 Firebase Configuration ${configLoadError ? 'Error' : 'Required'}</h3>
+                
+                ${configLoadError ? `
+                  <div style="margin: 16px 0; padding: 16px; background-color: rgba(239, 68, 68, 0.2); border-radius: 6px; border-left: 4px solid #ef4444;">
+                    <strong>❌ Config Load Error:</strong> ${configLoadError}
+                  </div>
+                ` : ''}
+                
+                <p style="margin: 0 0 16px 0; font-size: 16px; line-height: 1.6;">
+                  ${configLoadError ? 
+                    'Failed to load Firebase config from GitHub. Please follow the setup steps below.' : 
+                    'To enable data storage, create a config.js file in your GitHub repository.'}
+                </p>
+                
+                <h4 style="margin: 20px 0 12px 0; font-size: 18px; font-weight: 600;">📋 Quick Setup (One-Time):</h4>
+                <ol style="font-size: 15px;">
+                  <li><strong>Get your Firebase config:</strong>
+                    <ul style="margin-top: 8px; padding-left: 20px;">
+                      <li>Go to <a href="https://console.firebase.google.com" target="_blank" rel="noopener noreferrer">Firebase Console</a></li>
+                      <li>Create/select project → Click Web icon (&lt;/&gt;) → Copy the config</li>
+                      <li>Enable <strong>Firestore</strong> and <strong>Storage</strong> in test mode</li>
+                    </ul>
+                  </li>
+                  <li><strong>Create config.js in your study-notes repo:</strong>
+                    <div style="margin: 12px 0; padding: 12px; background-color: rgba(0,0,0,0.2); border-radius: 6px; font-family: monospace; font-size: 13px; overflow-x: auto;">
+window.FIREBASE_CONFIG = {<br>
+&nbsp;&nbsp;apiKey: "your-api-key",<br>
+&nbsp;&nbsp;authDomain: "your-project.firebaseapp.com",<br>
+&nbsp;&nbsp;projectId: "your-project-id",<br>
+&nbsp;&nbsp;storageBucket: "your-project.appspot.com",<br>
+&nbsp;&nbsp;messagingSenderId: "123456789",<br>
+&nbsp;&nbsp;appId: "your-app-id"<br>
+};
+                    </div>
+                  </li>
+                  <li><strong>Your config URL is already set to:</strong>
+                    <div style="margin: 12px 0; padding: 12px; background-color: rgba(16, 185, 129, 0.2); border-radius: 6px; font-family: monospace; font-size: 13px; overflow-x: auto;">
+https://raw.githubusercontent.com/<strong>techno-kalpesh/study-notes</strong>/main/config.js
+                    </div>
+                  </li>
+                  <li>Save config.js to your repo and reload this page - Done! ��</li>
+                </ol>
+                
+                <div style="margin-top: 20px; padding: 16px; background-color: rgba(16, 185, 129, 0.2); border-radius: 6px; border-left: 4px solid #10b981;">
+                  <strong>✨ Benefits:</strong> Update your config once on GitHub → All your sites automatically use the new config! No need to edit HTML files anymore.
+                </div>
+              </div>
+            ` : ''}
+            
+            <div id="page-content"></div>
+          </main>
+        </div>
+      `;
+      
+      // Add event listeners for navigation
+      document.querySelectorAll('.nav-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          currentPage = e.target.dataset.page;
+          renderApp();
+        });
       });
-    });
+      
+      // Add dark mode toggle listener
+      const darkModeBtn = document.getElementById('dark-mode-toggle');
+      if (darkModeBtn) {
+        darkModeBtn.addEventListener('click', () => {
+          isDarkMode = !isDarkMode;
+          renderApp();
+        });
+      }
+      
+      // Add search listener
+      const searchInput = document.getElementById('search-input');
+      if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+          searchQuery = e.target.value;
+          renderPageContent();
+        });
+      }
+      
+      renderPageContent();
+    }
+    
+    function renderPageContent() {
+      const pageContent = document.getElementById('page-content');
+      if (!pageContent) return;
+      
+      if (!isFirebaseConfigured) {
+        pageContent.innerHTML = '';
+        return;
+      }
+      
+      if (currentPage === 'home') {
+        renderHomePage();
+      } else if (currentPage === 'notes') {
+        renderNotesPage();
+      } else if (currentPage === 'share') {
+        renderSharePage();
+      }
+    }
+    
+    function renderHomePage() {
+      const config = window.elementSdk?.config || defaultConfig;
+      const pageContent = document.getElementById('page-content');
+      if (!pageContent) return;
+      
+      const baseSize = config.font_size || defaultConfig.font_size;
+      const customFont = config.font_family || defaultConfig.font_family;
+      const surfaceColor = isDarkMode ? "#334155" : (config.surface_color || defaultConfig.surface_color);
+      const textColor = isDarkMode ? "#f1f5f9" : (config.text_color || defaultConfig.text_color);
+      const primaryColor = config.primary_action_color || defaultConfig.primary_action_color;
+      const accentColor = config.accent_color || defaultConfig.accent_color;
+      
+      const totalNotes = currentNotes.length;
+      const subjects = [...new Set(currentNotes.map(n => n.subject))];
+      const recentNotes = currentNotes.slice(0, 5);
+      
+      pageContent.innerHTML = `
+        <div style="margin-bottom: 32px;">
+          <h2 style="font-size: ${baseSize * 1.8}px; font-weight: 700; margin: 0 0 24px 0;">Welcome to Study Notes Hub! 📚</h2>
+          
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 32px;">
+            <div style="padding: 24px; background-color: ${surfaceColor}; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); border-left: 4px solid ${primaryColor};">
+              <div style="font-size: ${baseSize * 2.5}px; font-weight: 700; color: ${primaryColor}; margin-bottom: 8px;">${totalNotes}</div>
+              <div style="font-size: ${baseSize}px; opacity: 0.8;">Total Notes</div>
+            </div>
+            
+            <div style="padding: 24px; background-color: ${surfaceColor}; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); border-left: 4px solid ${accentColor};">
+              <div style="font-size: ${baseSize * 2.5}px; font-weight: 700; color: ${accentColor}; margin-bottom: 8px;">${subjects.length}</div>
+              <div style="font-size: ${baseSize}px; opacity: 0.8;">Subjects</div>
+            </div>
+            
+            <div style="padding: 24px; background-color: ${surfaceColor}; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); border-left: 4px solid #f59e0b;">
+              <div style="font-size: ${baseSize * 2.5}px; font-weight: 700; color: #f59e0b; margin-bottom: 8px;">${currentNotes.filter(n => n.fileURL).length}</div>
+              <div style="font-size: ${baseSize}px; opacity: 0.8;">With Files</div>
+            </div>
+          </div>
+          
+          <div style="padding: 24px; background: linear-gradient(135deg, ${primaryColor} 0%, ${accentColor} 100%); border-radius: 8px; color: white; margin-bottom: 32px;">
+            <h3 style="font-size: ${baseSize * 1.5}px; font-weight: 600; margin: 0 0 12px 0;">🚀 Quick Actions</h3>
+            <p style="font-size: ${baseSize}px; margin: 0 0 16px 0; opacity: 0.9;">Start sharing knowledge with your peers!</p>
+            <button class="nav-btn" data-page="share" style="padding: 12px 24px; background-color: white; color: ${primaryColor}; border: none; border-radius: 6px; font-size: ${baseSize}px; font-weight: 600; cursor: pointer; font-family: '${customFont}', system-ui, sans-serif;">
+              📤 Share Your Notes
+            </button>
+          </div>
+          
+          <h3 style="font-size: ${baseSize * 1.5}px; font-weight: 600; margin: 0 0 20px 0;">📋 Recently Added Notes</h3>
+          ${recentNotes.length > 0 ? `
+            <div class="space-y-4">
+              ${recentNotes.map(note => `
+                <div style="padding: 20px; background-color: ${surfaceColor}; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); border-left: 4px solid ${accentColor};">
+                  <div style="display: flex; justify-content: space-between; align-items: start; gap: 12px; flex-wrap: wrap; margin-bottom: 12px;">
+                    <div style="flex: 1;">
+                      <h4 style="font-size: ${baseSize * 1.2}px; font-weight: 600; margin: 0 0 8px 0;">${escapeHtml(note.title)}</h4>
+                      <span style="display: inline-block; padding: 4px 12px; background-color: ${primaryColor}; color: white; border-radius: 4px; font-size: ${baseSize * 0.8}px; font-weight: 500;">${escapeHtml(note.subject)}</span>
+                    </div>
+                  </div>
+                  <p style="font-size: ${baseSize * 0.9}px; margin: 0 0 12px 0; opacity: 0.8;">${escapeHtml(note.description.substring(0, 150))}${note.description.length > 150 ? '...' : ''}</p>
+                  <div style="display: flex; justify-content: space-between; align-items: center; font-size: ${baseSize * 0.85}px; opacity: 0.7;">
+                    <span>By ${escapeHtml(note.author)}</span>
+                    <span>${note.createdAt ? formatDate(note.createdAt.toDate()) : 'Just now'}</span>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          ` : `
+            <div style="text-align: center; padding: 40px; background-color: ${surfaceColor}; border-radius: 8px; opacity: 0.6;">
+              <p style="font-size: ${baseSize * 1.1}px; margin: 0;">No notes yet. Be the first to share!</p>
+            </div>
+          `}
+        </div>
+      `;
+      
+      // Re-add navigation listeners for buttons inside content
+      pageContent.querySelectorAll('.nav-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          currentPage = e.target.dataset.page;
+          renderApp();
+        });
+      });
+    }
+    
+    function renderNotesPage() {
+      const config = window.elementSdk?.config || defaultConfig;
+      const pageContent = document.getElementById('page-content');
+      if (!pageContent) return;
+      
+      const baseSize = config.font_size || defaultConfig.font_size;
+      const customFont = config.font_family || defaultConfig.font_family;
+      const surfaceColor = isDarkMode ? "#334155" : (config.surface_color || defaultConfig.surface_color);
+      const textColor = isDarkMode ? "#f1f5f9" : (config.text_color || defaultConfig.text_color);
+      const primaryColor = config.primary_action_color || defaultConfig.primary_action_color;
+      
+      // Get unique subjects
+      const subjects = [...new Set(currentNotes.map(n => n.subject))].sort();
+      
+      // Filter notes by search query
+      let filteredNotes = currentNotes;
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        filteredNotes = currentNotes.filter(note => 
+          note.title.toLowerCase().includes(query) ||
+          note.subject.toLowerCase().includes(query) ||
+          note.author.toLowerCase().includes(query) ||
+          note.description.toLowerCase().includes(query)
+        );
+      }
+      
+      // Group notes by subject
+      const notesBySubject = {};
+      subjects.forEach(subject => {
+        notesBySubject[subject] = filteredNotes.filter(n => n.subject === subject);
+      });
+      
+      pageContent.innerHTML = `
+        <div>
+          <h2 style="font-size: ${baseSize * 1.8}px; font-weight: 700; margin: 0 0 24px 0;">Browse Notes by Subject 📚</h2>
+          
+          ${searchQuery ? `
+            <div style="padding: 16px; background-color: ${surfaceColor}; border-radius: 8px; margin-bottom: 24px; border-left: 4px solid ${primaryColor};">
+              <p style="font-size: ${baseSize}px; margin: 0;">
+                Found <strong>${filteredNotes.length}</strong> note${filteredNotes.length !== 1 ? 's' : ''} matching "${escapeHtml(searchQuery)}"
+              </p>
+            </div>
+          ` : ''}
+          
+          ${subjects.length > 0 ? subjects.map(subject => {
+            const subjectNotes = notesBySubject[subject];
+            if (subjectNotes.length === 0) return '';
+            
+            return `
+              <div style="margin-bottom: 32px;">
+                <h3 style="font-size: ${baseSize * 1.4}px; font-weight: 600; margin: 0 0 16px 0; padding-bottom: 8px; border-bottom: 2px solid ${primaryColor};">
+                  ${escapeHtml(subject)} (${subjectNotes.length})
+                </h3>
+                <div id="notes-list-${subject.replace(/[^a-zA-Z0-9]/g, '')}" class="space-y-4"></div>
+              </div>
+            `;
+          }).join('') : `
+            <div style="text-align: center; padding: 40px; background-color: ${surfaceColor}; border-radius: 8px; opacity: 0.6;">
+              <p style="font-size: ${baseSize * 1.1}px; margin: 0;">No notes found${searchQuery ? ' matching your search' : ''}.</p>
+            </div>
+          `}
+        </div>
+      `;
+      
+      // Render notes for each subject
+      subjects.forEach(subject => {
+        const subjectNotes = notesBySubject[subject];
+        if (subjectNotes.length > 0) {
+          renderNotesListForSubject(subject, subjectNotes);
+        }
+      });
+    }
+    
+    function renderSharePage() {
+      const config = window.elementSdk?.config || defaultConfig;
+      const pageContent = document.getElementById('page-content');
+      if (!pageContent) return;
+      
+      const baseSize = config.font_size || defaultConfig.font_size;
+      const customFont = config.font_family || defaultConfig.font_family;
+      const surfaceColor = isDarkMode ? "#334155" : (config.surface_color || defaultConfig.surface_color);
+      const textColor = isDarkMode ? "#f1f5f9" : (config.text_color || defaultConfig.text_color);
+      const primaryColor = config.primary_action_color || defaultConfig.primary_action_color;
+      
+      pageContent.innerHTML = `
+        <div class="p-6 rounded-lg" style="background-color: ${surfaceColor}; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+          <h2 style="font-size: ${baseSize * 1.5}px; font-weight: 600; margin: 0 0 20px 0;">Share Your Notes 📤</h2>
+          <form id="notes-form" class="space-y-4">
+            <div>
+              <label for="note-title" style="display: block; font-size: ${baseSize * 0.9}px; font-weight: 500; margin-bottom: 6px; color: ${textColor};">Note Title</label>
+              <input type="text" id="note-title" required placeholder="Introduction to Biology" style="width: 100%; padding: 12px; border: 1px solid ${isDarkMode ? '#475569' : '#e2e8f0'}; background-color: ${isDarkMode ? '#475569' : 'white'}; color: ${textColor}; border-radius: 6px; font-size: ${baseSize}px; font-family: '${customFont}', system-ui, sans-serif;">
+            </div>
+            
+            <div>
+              <label for="note-subject" style="display: block; font-size: ${baseSize * 0.9}px; font-weight: 500; margin-bottom: 6px; color: ${textColor};">Subject</label>
+              <input type="text" id="note-subject" required placeholder="Biology" style="width: 100%; padding: 12px; border: 1px solid ${isDarkMode ? '#475569' : '#e2e8f0'}; background-color: ${isDarkMode ? '#475569' : 'white'}; color: ${textColor}; border-radius: 6px; font-size: ${baseSize}px; font-family: '${customFont}', system-ui, sans-serif;">
+            </div>
+            
+            <div>
+              <label for="note-description" style="display: block; font-size: ${baseSize * 0.9}px; font-weight: 500; margin-bottom: 6px; color: ${textColor};">Description</label>
+              <textarea id="note-description" required rows="3" placeholder="Brief overview of the notes content..." style="width: 100%; padding: 12px; border: 1px solid ${isDarkMode ? '#475569' : '#e2e8f0'}; background-color: ${isDarkMode ? '#475569' : 'white'}; color: ${textColor}; border-radius: 6px; font-size: ${baseSize}px; resize: vertical; font-family: '${customFont}', system-ui, sans-serif;"></textarea>
+            </div>
+
+            <div>
+              <label style="display: block; font-size: ${baseSize * 0.9}px; font-weight: 500; margin-bottom: 6px; color: ${textColor};">Attach File (PDF, DOC, IMG)</label>
+              <div class="file-input-wrapper">
+                <label for="file-input" style="display: block; width: 100%; padding: 12px; border: 2px dashed ${isDarkMode ? '#64748b' : '#cbd5e1'}; background-color: ${isDarkMode ? '#475569' : 'transparent'}; border-radius: 6px; text-align: center; cursor: pointer; font-size: ${baseSize}px; color: ${textColor}; transition: all 0.2s; font-family: '${customFont}', system-ui, sans-serif;">
+                  📎 Click to attach file (Max 5MB)
+                </label>
+                <input type="file" id="file-input" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif,.svg" />
+              </div>
+              <div id="file-preview-container"></div>
+            </div>
+            
+            <div>
+              <label for="note-author" style="display: block; font-size: ${baseSize * 0.9}px; font-weight: 500; margin-bottom: 6px; color: ${textColor};">Your Name</label>
+              <input type="text" id="note-author" required placeholder="John Doe" style="width: 100%; padding: 12px; border: 1px solid ${isDarkMode ? '#475569' : '#e2e8f0'}; background-color: ${isDarkMode ? '#475569' : 'white'}; color: ${textColor}; border-radius: 6px; font-size: ${baseSize}px; font-family: '${customFont}', system-ui, sans-serif;">
+            </div>
+            
+            <button type="submit" id="submit-btn" style="width: 100%; padding: 14px; background-color: ${primaryColor}; color: white; border: none; border-radius: 6px; font-size: ${baseSize * 1.1}px; font-weight: 600; cursor: pointer; transition: opacity 0.2s; font-family: '${customFont}', system-ui, sans-serif;">
+              ${config.submit_button_text || defaultConfig.submit_button_text}
+            </button>
+          </form>
+        </div>
+      `;
+      
+      // Add form submission listener
+      const form = document.getElementById('notes-form');
+      if (form) {
+        form.addEventListener('submit', handleSubmit);
+      }
+      
+      // Add file input listener
+      const fileInput = document.getElementById('file-input');
+      if (fileInput) {
+        fileInput.addEventListener('change', handleFileSelect);
+      }
+    }
+    
+    function handleFileSelect(e) {
+      const file = e.target.files[0];
+      const config = window.elementSdk?.config || defaultConfig;
+      const baseSize = config.font_size || defaultConfig.font_size;
+      const customFont = config.font_family || defaultConfig.font_family;
+      const secondaryColor = config.secondary_action_color || defaultConfig.secondary_action_color;
+      
+      if (!file) {
+        selectedFile = null;
+        document.getElementById('file-preview-container').innerHTML = '';
+        return;
+      }
+
+      if (file.size > 5 * 1024 * 1024) {
+        showToast("File size must be less than 5MB", "error");
+        e.target.value = '';
+        return;
+      }
+
+      const fileType = getFileType(file.name);
+      const fileIconClass = getFileIconClass(fileType);
+
+      selectedFile = {
+        file: file,
+        name: file.name,
+        type: fileType
+      };
+
+      document.getElementById('file-preview-container').innerHTML = `
+        <div class="file-preview">
+          <div class="file-icon ${fileIconClass}">${fileType.toUpperCase()}</div>
+          <div style="flex: 1;">
+            <div style="font-size: ${baseSize * 0.9}px; font-weight: 500; font-family: '${customFont}', system-ui, sans-serif;">${escapeHtml(file.name)}</div>
+            <div style="font-size: ${baseSize * 0.8}px; opacity: 0.7;">${formatFileSize(file.size)}</div>
+          </div>
+          <button type="button" id="remove-file-btn" style="padding: 6px 12px; background-color: transparent; color: ${secondaryColor}; border: 1px solid ${secondaryColor}; border-radius: 4px; font-size: ${baseSize * 0.8}px; cursor: pointer; font-family: '${customFont}', system-ui, sans-serif;">Remove</button>
+        </div>
+      `;
+
+      document.getElementById('remove-file-btn').addEventListener('click', () => {
+        selectedFile = null;
+        document.getElementById('file-input').value = '';
+        document.getElementById('file-preview-container').innerHTML = '';
+      });
+    }
+
+    function getFileType(fileName) {
+      const ext = fileName.split('.').pop().toLowerCase();
+      if (ext === 'pdf') return 'pdf';
+      if (['doc', 'docx'].includes(ext)) return 'doc';
+      if (['jpg', 'jpeg', 'png', 'gif', 'svg'].includes(ext)) return 'img';
+      return 'other';
+    }
+
+    function getFileIconClass(fileType) {
+      return fileType;
+    }
+
+    function formatFileSize(bytes) {
+      if (bytes < 1024) return bytes + ' B';
+      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+      return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+    }
+    
+    async function handleSubmit(e) {
+      e.preventDefault();
+      
+      if (isSubmitting || !db) return;
+      
+      isSubmitting = true;
+      const submitBtn = document.getElementById('submit-btn');
+      submitBtn.style.opacity = '0.6';
+      submitBtn.style.cursor = 'not-allowed';
+      submitBtn.textContent = 'Uploading...';
+      
+      try {
+        const title = document.getElementById('note-title').value;
+        const subject = document.getElementById('note-subject').value;
+        const description = document.getElementById('note-description').value;
+        const author = document.getElementById('note-author').value;
+        
+        let fileURL = '';
+        let fileName = '';
+        let fileType = '';
+        
+        // Upload file if selected
+        if (selectedFile) {
+          const storageRef = storage.ref();
+          const fileRef = storageRef.child(`notes/${Date.now()}_${selectedFile.file.name}`);
+          
+          showToast("Uploading file...", "info");
+          await fileRef.put(selectedFile.file);
+          fileURL = await fileRef.getDownloadURL();
+          fileName = selectedFile.name;
+          fileType = selectedFile.type;
+        }
+        
+        // Add note to Firestore
+        await db.collection('notes').add({
+          title,
+          subject,
+          description,
+          author,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+          fileURL,
+          fileName,
+          fileType
+        });
+        
+        document.getElementById('notes-form').reset();
+        selectedFile = null;
+        document.getElementById('file-preview-container').innerHTML = '';
+        showToast("Notes shared successfully!", "success");
+        
+        // Navigate to notes page after successful submission
+        setTimeout(() => {
+          currentPage = 'notes';
+          renderApp();
+        }, 1500);
+        
+      } catch (error) {
+        console.error("Error adding note:", error);
+        showToast("Failed to share notes. Check console for details.", "error");
+      } finally {
+        isSubmitting = false;
+        const config = window.elementSdk?.config || defaultConfig;
+        submitBtn.style.opacity = '1';
+        submitBtn.style.cursor = 'pointer';
+        submitBtn.textContent = config.submit_button_text || defaultConfig.submit_button_text;
+      }
+    }
+    
+    function renderNotesListForSubject(subject, notes) {
+      const config = window.elementSdk?.config || defaultConfig;
+      const notesList = document.getElementById(`notes-list-${subject.replace(/[^a-zA-Z0-9]/g, '')}`);
+      if (!notesList) return;
+      
+      const baseSize = config.font_size || defaultConfig.font_size;
+      const customFont = config.font_family || defaultConfig.font_family;
+      const surfaceColor = isDarkMode ? "#334155" : (config.surface_color || defaultConfig.surface_color);
+      const textColor = isDarkMode ? "#f1f5f9" : (config.text_color || defaultConfig.text_color);
+      const primaryColor = config.primary_action_color || defaultConfig.primary_action_color;
+      const secondaryColor = config.secondary_action_color || defaultConfig.secondary_action_color;
+      
+      notesList.innerHTML = notes.map(note => `
+        <div class="note-card p-6 rounded-lg" data-note-id="${note.id}" style="background-color: ${surfaceColor}; box-shadow: 0 2px 8px rgba(0,0,0,0.1); border-left: 4px solid ${secondaryColor};">
+          <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px; gap: 12px; flex-wrap: wrap;">
+            <div style="flex: 1; min-width: 200px;">
+              <h3 style="font-size: ${baseSize * 1.3}px; font-weight: 600; margin: 0 0 8px 0; color: ${textColor};">${escapeHtml(note.title)}</h3>
+              <span style="display: inline-block; padding: 4px 12px; background-color: ${secondaryColor}; color: white; border-radius: 4px; font-size: ${baseSize * 0.8}px; font-weight: 500;">${escapeHtml(note.subject)}</span>
+            </div>
+            <button class="delete-btn" data-note-id="${note.id}" style="padding: 8px 16px; background-color: transparent; color: ${secondaryColor}; border: 1px solid ${secondaryColor}; border-radius: 6px; font-size: ${baseSize * 0.85}px; cursor: pointer; transition: all 0.2s; font-family: '${customFont}', system-ui, sans-serif; flex-shrink: 0;">Delete</button>
+          </div>
+          <p style="font-size: ${baseSize}px; margin: 12px 0; line-height: 1.6; color: ${textColor};">${escapeHtml(note.description)}</p>
+          ${note.fileName && note.fileURL ? `
+            <div style="margin: 12px 0; padding: 12px; background-color: ${isDarkMode ? '#475569' : '#f8fafc'}; border-radius: 6px;">
+              <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                <div class="file-icon ${note.fileType}">${note.fileType.toUpperCase()}</div>
+                <div style="flex: 1; min-width: 150px;">
+                  <div style="font-size: ${baseSize * 0.9}px; font-weight: 500; word-break: break-word;">${escapeHtml(note.fileName)}</div>
+                </div>
+                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                  <button class="view-file-btn" data-note-id="${note.id}" style="padding: 8px 16px; background-color: ${primaryColor}; color: white; border: none; border-radius: 4px; font-size: ${baseSize * 0.85}px; font-weight: 500; cursor: pointer; font-family: '${customFont}', system-ui, sans-serif;">View</button>
+                  <a href="${note.fileURL}" download="${note.fileName}" target="_blank" rel="noopener noreferrer" style="padding: 8px 16px; background-color: ${secondaryColor}; color: white; border: none; border-radius: 4px; font-size: ${baseSize * 0.85}px; font-weight: 500; cursor: pointer; text-decoration: none; display: inline-block; font-family: '${customFont}', system-ui, sans-serif;">Download</a>
+                </div>
+              </div>
+            </div>
+          ` : ''}
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 12px; padding-top: 12px; border-top: 1px solid ${isDarkMode ? '#475569' : '#e2e8f0'}; flex-wrap: wrap; gap: 8px;">
+            <span style="font-size: ${baseSize * 0.85}px; opacity: 0.7;">By ${escapeHtml(note.author)}</span>
+            <span style="font-size: ${baseSize * 0.85}px; opacity: 0.7;">${note.createdAt ? formatDate(note.createdAt.toDate()) : 'Just now'}</span>
+          </div>
+        </div>
+      `).join('');
+      
+      notesList.querySelectorAll('.delete-btn').forEach(btn => {
+        btn.addEventListener('click', handleDelete);
+      });
+
+      notesList.querySelectorAll('.view-file-btn').forEach(btn => {
+        btn.addEventListener('click', handleViewFile);
+      });
+    }
+    
+    function renderNotesList() {
+      // This function is called from listenToNotes() but actual rendering
+      // is handled by renderPageContent() when on home or notes page
+      if (currentPage === 'home' || currentPage === 'notes') {
+        renderPageContent();
+      }
+    }
+
+    function handleViewFile(e) {
+      const noteId = e.target.dataset.noteId;
+      const note = currentNotes.find(n => n.id === noteId);
+      
+      if (!note || !note.fileName) return;
+
+      const config = window.elementSdk?.config || defaultConfig;
+      const customFont = config.font_family || defaultConfig.font_family;
+      const baseSize = config.font_size || defaultConfig.font_size;
+
+      const modalOverlay = document.createElement('div');
+      modalOverlay.className = 'modal-overlay';
+      
+      let viewerContent = '';
+      
+      if (note.fileType === 'img') {
+        viewerContent = `<img src="${note.fileURL}" alt="${escapeHtml(note.fileName)}" style="max-width: 100%; height: auto; border-radius: 8px;">`;
+      } else if (note.fileType === 'pdf') {
+        viewerContent = `<embed src="${note.fileURL}" type="application/pdf" style="width: 100%; height: 80%; border-radius: 8px;">`;
+      } else {
+        viewerContent = `
+          <div style="padding: 40px; text-align: center;">
+            <div class="file-icon ${note.fileType}" style="width: 80px; height: 80px; margin: 0 auto 20px; font-size: 24px;">${note.fileType.toUpperCase()}</div>
+            <h3 style="font-size: ${baseSize * 1.5}px; margin-bottom: 12px; font-family: '${customFont}', system-ui, sans-serif;">${escapeHtml(note.fileName)}</h3>
+            <p style="font-size: ${baseSize}px; opacity: 0.7; margin-bottom: 24px;">Preview not available for this file type</p>
+            <a href="${note.fileURL}" download="${note.fileName}" target="_blank" rel="noopener noreferrer" style="display: inline-block; padding: 12px 24px; background-color: #3b82f6; color: white; border-radius: 6px; text-decoration: none; font-size: ${baseSize}px; font-weight: 500; font-family: '${customFont}', system-ui, sans-serif;">Download File</a>
+          </div>
+        `;
+      }
+      
+      modalOverlay.innerHTML = `
+        <div class="modal-content" style="padding: 20px; font-family: '${customFont}', system-ui, sans-serif;">
+          <button class="modal-close">Close</button>
+          <div style="padding-top: 40px;">
+            ${viewerContent}
+          </div>
+        </div>
+      `;
+      
+      document.body.appendChild(modalOverlay);
+      
+      modalOverlay.querySelector('.modal-close').addEventListener('click', () => {
+        modalOverlay.remove();
+      });
+      
+      modalOverlay.addEventListener('click', (e) => {
+        if (e.target === modalOverlay) {
+          modalOverlay.remove();
+        }
+      });
+    }
+    
+    async function handleDelete(e) {
+      const noteId = e.target.dataset.noteId;
+      const noteToDelete = currentNotes.find(n => n.id === noteId);
+      
+      if (!noteToDelete || !db) return;
+      
+      const deleteBtn = e.target;
+      const originalText = deleteBtn.textContent;
+      deleteBtn.textContent = 'Deleting...';
+      deleteBtn.style.opacity = '0.6';
+      deleteBtn.style.cursor = 'not-allowed';
+      deleteBtn.disabled = true;
+      
+      try {
+        // Delete file from storage if exists
+        if (noteToDelete.fileURL) {
+          try {
+            const fileRef = storage.refFromURL(noteToDelete.fileURL);
+            await fileRef.delete();
+          } catch (error) {
+            console.error("Error deleting file:", error);
+          }
+        }
+        
+        // Delete note from Firestore
+        await db.collection('notes').doc(noteId).delete();
+        showToast("Note deleted successfully", "success");
+        
+      } catch (error) {
+        console.error("Error deleting note:", error);
+        showToast("Failed to delete note. Please try again.", "error");
+        deleteBtn.textContent = originalText;
+        deleteBtn.style.opacity = '1';
+        deleteBtn.style.cursor = 'pointer';
+        deleteBtn.disabled = false;
+      }
+    }
+    
+    function showToast(message, type) {
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      toast.textContent = message;
+      document.body.appendChild(toast);
+      
+      setTimeout(() => {
+        toast.remove();
+      }, 3000);
+    }
+    
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+    
+    function formatDate(date) {
+      return date.toLocaleDateString('en-US', { 
+        year: 'numeric', 
+        month: 'short', 
+        day: 'numeric' 
+      });
+    }
+    
+    async function onConfigChange(config) {
+      const customFont = config.font_family || defaultConfig.font_family;
+      const baseSize = config.font_size || defaultConfig.font_size;
+      const bgColor = isDarkMode ? "#1e293b" : (config.background_color || defaultConfig.background_color);
+      const surfaceColor = isDarkMode ? "#334155" : (config.surface_color || defaultConfig.surface_color);
+      const textColor = isDarkMode ? "#f1f5f9" : (config.text_color || defaultConfig.text_color);
+      const primaryColor = config.primary_action_color || defaultConfig.primary_action_color;
+      
+      const appContainer = document.querySelector('#app > div');
+      if (appContainer) {
+        appContainer.style.backgroundColor = bgColor;
+        appContainer.style.fontFamily = `'${customFont}', system-ui, -apple-system, sans-serif`;
+        appContainer.style.color = textColor;
+      }
+      
+      const header = document.querySelector('header');
+      if (header) {
+        header.style.backgroundColor = surfaceColor;
+        header.style.borderBottomColor = primaryColor;
+      }
+      
+      const siteTitle = document.getElementById('site-title');
+      if (siteTitle) {
+        siteTitle.style.fontSize = `${baseSize * 2}px`;
+        siteTitle.textContent = config.site_title || defaultConfig.site_title;
+      }
+      
+      const submitBtn = document.getElementById('submit-btn');
+      if (submitBtn && !isSubmitting) {
+        submitBtn.style.backgroundColor = primaryColor;
+        submitBtn.style.fontSize = `${baseSize * 1.1}px`;
+        submitBtn.style.fontFamily = `'${customFont}', system-ui, sans-serif`;
+        submitBtn.textContent = config.submit_button_text || defaultConfig.submit_button_text;
+      }
+      
+      document.querySelectorAll('input, textarea').forEach(input => {
+        input.style.fontSize = `${baseSize}px`;
+        input.style.fontFamily = `'${customFont}', system-ui, sans-serif`;
+      });
+      
+      document.querySelectorAll('label').forEach(label => {
+        label.style.fontSize = `${baseSize * 0.9}px`;
+      });
+      
+      // Re-render current page content
+      renderPageContent();
+    }
+    
+    function mapToCapabilities(config) {
+      return {
+        recolorables: [
+          {
+            get: () => config.background_color || defaultConfig.background_color,
+            set: (value) => {
+              config.background_color = value;
+              window.elementSdk.setConfig({ background_color: value });
+            }
+          },
+          {
+            get: () => config.surface_color || defaultConfig.surface_color,
+            set: (value) => {
+              config.surface_color = value;
+              window.elementSdk.setConfig({ surface_color: value });
+            }
+          },
+          {
+            get: () => config.text_color || defaultConfig.text_color,
+            set: (value) => {
+              config.text_color = value;
+              window.elementSdk.setConfig({ text_color: value });
+            }
+          },
+          {
+            get: () => config.primary_action_color || defaultConfig.primary_action_color,
+            set: (value) => {
+              config.primary_action_color = value;
+              window.elementSdk.setConfig({ primary_action_color: value });
+            }
+          },
+          {
+            get: () => config.accent_color || defaultConfig.accent_color,
+            set: (value) => {
+              config.accent_color = value;
+              window.elementSdk.setConfig({ accent_color: value });
+            }
+          }
+        ],
+        borderables: [],
+        fontEditable: {
+          get: () => config.font_family || defaultConfig.font_family,
+          set: (value) => {
+            config.font_family = value;
+            window.elementSdk.setConfig({ font_family: value });
+          }
+        },
+        fontSizeable: {
+          get: () => config.font_size || defaultConfig.font_size,
+          set: (value) => {
+            config.font_size = value;
+            window.elementSdk.setConfig({ font_size: value });
+          }
+        }
+      };
+    }
+    
+    function mapToEditPanelValues(config) {
+      return new Map([
+        ["site_title", config.site_title || defaultConfig.site_title],
+        ["site_subtitle", config.site_subtitle || defaultConfig.site_subtitle],
+        ["submit_button_text", config.submit_button_text || defaultConfig.submit_button_text]
+      ]);
+    }
+    
+    initApp();
   </script>
-</body>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9a578547968674f4',t:'MTc2NDMwODMyMi4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
